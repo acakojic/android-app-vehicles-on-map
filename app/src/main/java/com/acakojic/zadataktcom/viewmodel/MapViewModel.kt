@@ -10,10 +10,19 @@ import android.preference.PreferenceManager
 import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconToggleButton
 import androidx.compose.material3.Text
@@ -28,6 +37,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import com.acakojic.zadataktcom.service.CustomRepository
 import com.acakojic.zadataktcom.service.Vehicle
 
@@ -35,6 +45,7 @@ import org.osmdroid.views.MapView
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.overlay.Marker
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -70,7 +81,6 @@ class MapViewModel(private val customRepository: CustomRepository, private val c
         }
     }
 }
-
 
 @Composable
 fun VehicleMapScreen(viewModel: MapViewModel, onVehicleClick: (Vehicle) -> Unit) {
@@ -112,13 +122,10 @@ fun VehicleImageWithFavorite(vehicle: Vehicle, onFavoriteToggle: (Vehicle) -> Un
             Icon(
                 painter = painterResource(id = R.drawable.nav_tab_favorite_icon),
                 contentDescription = "Favorite",
-                tint = (if (vehicle.isFavorite) Color(0xFFFFA500) else androidx.compose.ui.graphics.Color.White) // orange if favorite, white if not
+                tint = (if (vehicle.isFavorite) Color(0xFFFFA500) else Color.White) // orange if favorite, white if not
             )
         }
     }
-
-    Text(vehicle.name)
-    Text("Price: ${vehicle.price}€")
 }
 
 @Composable
@@ -128,34 +135,51 @@ fun VehicleDetailDialog(
     onFavoriteToggle: (Vehicle) -> Unit
 ) {
     if (vehicle != null) {
-        Dialog(
-            onDismissRequest = onDismiss
-        ) {
-//            title = {
-//                Text(text = vehicle.name)
-//            },
-//            text = {
-            Column {
+        val configuration = LocalConfiguration.current
+        val screenWidth = configuration.screenWidthDp.dp
+        val imageWidth = screenWidth * 0.9f
 
-                VehicleImageWithFavorite(vehicle = vehicle, onFavoriteToggle = onFavoriteToggle)
+        AlertDialog(
+            onDismissRequest = onDismiss,
+            text = {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 0.dp)
+                ) {
 
-//                    Text("Price: ${vehicle.price}€")
-//
-//                    Image(
-//                        painter = rememberImagePainter(vehicle.imageURL),
-//                        contentDescription = "Vozilo slika",
+                    VehicleImageWithFavorite(vehicle = vehicle, onFavoriteToggle = onFavoriteToggle)
+
+//                        Image(
+//                            painter = rememberImagePainter(vehicle.imageURL),
+//                            contentDescription = "Vozilo slika",
 //                        modifier = Modifier
-//                            .size(200.dp)
+////                            .size(imageWidth) //set fixed size
 //                            .clip(RoundedCornerShape(8.dp))
-//                    )
+//                        )
 
-            }
-//            },
-//            confirmButton = {
-//                Button(onClick = onDismiss) {
-//                    Text("Close")
-//                }
-        }
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(text = vehicle.name)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 0.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("${vehicle.rating}")
+                        Spacer(Modifier.weight(1f))
+                        Text("${vehicle.price}€")
+                    }
+
+
+                }
+            },
+            confirmButton = {}
+        )
+//        Column {
+//
+//            VehicleImageWithFavorite(vehicle = vehicle, onFavoriteToggle = onFavoriteToggle)
+//        }
     }
 }
 
