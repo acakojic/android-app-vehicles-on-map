@@ -3,12 +3,20 @@ package com.acakojic.zadataktcom.viewmodel
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
-import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
 import android.preference.PreferenceManager
 import android.util.Log
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconToggleButton
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.lifecycle.ViewModel
@@ -16,6 +24,10 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import com.acakojic.zadataktcom.service.CustomRepository
 import com.acakojic.zadataktcom.service.Vehicle
 
@@ -23,14 +35,18 @@ import org.osmdroid.views.MapView
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.overlay.Marker
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.window.Dialog
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
+import androidx.wear.compose.material.dialog.Dialog
+import coil.compose.rememberImagePainter
 import com.acakojic.zadataktcom.R
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
-
 
 
 class MapViewModel(private val customRepository: CustomRepository, private val context: Context) :
@@ -57,7 +73,7 @@ class MapViewModel(private val customRepository: CustomRepository, private val c
 
 
 @Composable
-fun VehicleMapScreen(viewModel: MapViewModel) {
+fun VehicleMapScreen(viewModel: MapViewModel, onVehicleClick: (Vehicle) -> Unit) {
     val context = LocalContext.current
     val vehicles = viewModel.vehicles.observeAsState(listOf()).value
     val mapView = remember { initializeMap(context) }
@@ -65,32 +81,120 @@ fun VehicleMapScreen(viewModel: MapViewModel) {
     // Use Side Effects to update markers when vehicles data changes
     LaunchedEffect(vehicles) {
         mapView.overlays.clear()
-        addMarkersToMap(context = context, mapView = mapView, vehicles = vehicles)
+        addMarkersToMap(
+            context = context,
+            mapView = mapView,
+            vehicles = vehicles,
+            onVehicleClick = onVehicleClick
+        )
         mapView.invalidate()
     }
 
     AndroidView(factory = { mapView })
 }
 
-fun addMarkersToMap(context: Context, mapView: MapView, vehicles: List<Vehicle>) {
+@Composable
+fun VehicleImageWithFavorite(vehicle: Vehicle, onFavoriteToggle: (Vehicle) -> Unit) {
+    Box(contentAlignment = Alignment.TopEnd) {
+        Image(
+            painter = rememberImagePainter(vehicle.imageURL),
+            contentDescription = "Vehicle Image",
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(8.dp))
+        )
+        IconToggleButton(
+            checked = vehicle.isFavorite,
+            onCheckedChange = {
+                onFavoriteToggle(vehicle)
+            }
+        ) {
+            Icon(
+                painter = painterResource(id = R.drawable.nav_tab_favorite_icon),
+                contentDescription = "Favorite",
+                tint = (if (vehicle.isFavorite) Color(0xFFFFA500) else androidx.compose.ui.graphics.Color.White) // orange if favorite, white if not
+            )
+        }
+    }
+
+    Text(vehicle.name)
+    Text("Price: ${vehicle.price}€")
+}
+
+@Composable
+fun VehicleDetailDialog(
+    vehicle: Vehicle?,
+    onDismiss: () -> Unit,
+    onFavoriteToggle: (Vehicle) -> Unit
+) {
+    if (vehicle != null) {
+        Dialog(
+            onDismissRequest = onDismiss
+        ) {
+//            title = {
+//                Text(text = vehicle.name)
+//            },
+//            text = {
+            Column {
+
+                VehicleImageWithFavorite(vehicle = vehicle, onFavoriteToggle = onFavoriteToggle)
+
+//                    Text("Price: ${vehicle.price}€")
+//
+//                    Image(
+//                        painter = rememberImagePainter(vehicle.imageURL),
+//                        contentDescription = "Vozilo slika",
+//                        modifier = Modifier
+//                            .size(200.dp)
+//                            .clip(RoundedCornerShape(8.dp))
+//                    )
+
+            }
+//            },
+//            confirmButton = {
+//                Button(onClick = onDismiss) {
+//                    Text("Close")
+//                }
+        }
+    }
+}
+
+
+fun addMarkersToMap(
+    context: Context,
+    mapView: MapView,
+    vehicles: List<Vehicle>,
+    onVehicleClick: (Vehicle) -> Unit
+) {
+    mapView.overlays.clear()  // Clear existing overlays first
+
     vehicles.forEach { vehicle ->
         val marker = Marker(mapView).apply {
             position = GeoPoint(vehicle.location.latitude, vehicle.location.longitude)
             title = vehicle.name
             snippet = "Price: ${vehicle.price}€"
             setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+            icon = getMarkerIconWithText(
+                context = context,
+                vehicleTypeID = vehicle.vehicleTypeID,
+                price = vehicle.price
+            )
 
-            icon = getMarkerIconWithText(context = context, vehicleTypeID = vehicle.vehicleTypeID, price = vehicle.price)
+            setOnMarkerClickListener { marker, mapView ->
+                onVehicleClick(vehicle)
+                true  // Return true to indicate that the event has been handled
+            }
         }
         mapView.overlays.add(marker)
     }
+    mapView.invalidate()  // Refresh the map
 }
 
 fun getMarkerIconWithText(context: Context, vehicleTypeID: Int, price: Double): Drawable {
     val drawable = when (vehicleTypeID) {
-        1 -> ContextCompat.getDrawable(context, R.drawable.circle_black)
-        2 -> ContextCompat.getDrawable(context, R.drawable.circle_red)
-        3 -> ContextCompat.getDrawable(context, R.drawable.circle_blue)
+        1 -> ContextCompat.getDrawable(context, R.drawable.circle_black) //cars
+        2 -> ContextCompat.getDrawable(context, R.drawable.circle_red) //moto
+        3 -> ContextCompat.getDrawable(context, R.drawable.circle_blue) //truck
         else ->
             ContextCompat.getDrawable(context, R.drawable.circle_black) // Default case
     }
@@ -108,7 +212,7 @@ fun getMarkerIconWithText(context: Context, vehicleTypeID: Int, price: Double): 
         // Draw text on the bitmap
         val text = "$${price}"
         val paint = Paint().apply {
-            color = Color.WHITE
+            color = android.graphics.Color.WHITE
             textSize = 30f // Adjust size as needed
             textAlign = Paint.Align.CENTER
         }
@@ -124,14 +228,20 @@ fun getMarkerIconWithText(context: Context, vehicleTypeID: Int, price: Double): 
 
 
 fun initializeMap(context: Context): MapView {
-    Configuration.getInstance().load(context, PreferenceManager.getDefaultSharedPreferences(context))
+    Configuration.getInstance()
+        .load(context, PreferenceManager.getDefaultSharedPreferences(context))
 
     val mapView = MapView(context)
     mapView.setTileSource(TileSourceFactory.MAPNIK)
     mapView.setBuiltInZoomControls(true)
 //    mapView.isMultiTouchControls = true
     mapView.controller.setZoom(12.0)
-    mapView.controller.setCenter(GeoPoint(44.81722374773659, 20.460807455759323))  //Belgrade starting location
+    mapView.controller.setCenter(
+        GeoPoint(
+            44.81722374773659,
+            20.460807455759323
+        )
+    )  //Belgrade starting location
 
     return mapView
 }

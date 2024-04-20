@@ -71,6 +71,8 @@ dependencies {
     implementation ("org.osmdroid:osmdroid-android:6.1.10")
     implementation ("org.apache.commons:commons-compress:1.21")
     implementation("androidx.compose.runtime:runtime-livedata:1.6.6")
+    implementation ("io.coil-kt:coil-compose:1.4.0")
+    implementation("androidx.wear.compose:compose-material:1.3.1") //for showing image
     //my adding end
 
     testImplementation("junit:junit:4.13.2")
