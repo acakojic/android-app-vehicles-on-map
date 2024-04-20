@@ -65,22 +65,22 @@ class SignInActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    SignInScreen(signInViewModel, navigateToNextScreen(context = context))
-
+                    SignInScreen(signInViewModel = signInViewModel) {
+                        navigateToNextScreen()
+                    }
                 }
             }
         }
     }
 
-    private fun navigateToNextScreen(context: Context) {
-        // Start a new activity, replace with actual navigation logic
-        val intent = Intent(context, MainActivity::class.java)
+    private fun navigateToNextScreen() {
+        val intent = Intent(this, MainActivity::class.java)
         startActivity(intent)
     }
 }
 
 @Composable
-fun SignInScreen(signInViewModel: SignInViewModel, navigateToNextScreen: Unit) {
+fun SignInScreen(signInViewModel: SignInViewModel, navigateToNextScreen: () -> Unit) {
     val context = LocalContext.current
     val uiState by signInViewModel.uiState.collectAsState()
 
@@ -89,7 +89,7 @@ fun SignInScreen(signInViewModel: SignInViewModel, navigateToNextScreen: Unit) {
     if (uiState.isSuccess) {
         Log.d("SignInActivity", "SignInScreen: ")
         // TODO: Navigate to the next page
-        navigateToNextScreen
+        navigateToNextScreen()
     }
 
     Surface(color = Color.Black, modifier = Modifier.fillMaxSize()) {
@@ -149,7 +149,7 @@ fun SignInScreen(signInViewModel: SignInViewModel, navigateToNextScreen: Unit) {
                 // start new Activity
                 Button(
                     onClick = {
-                        navigateToNextScreen
+                        navigateToNextScreen()
                     },
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(containerColor = Color.Blue),

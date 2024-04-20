@@ -49,7 +49,7 @@ data class Vehicle(
     val name: String,
     val location: Location,
     val rating: Double,
-    val price: Int,
+    val price: Double,
     val isFavorite: Boolean
 )
 
