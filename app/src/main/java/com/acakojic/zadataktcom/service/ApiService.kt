@@ -39,6 +39,17 @@ interface ApiService {
         @Query("vehicleID") vehicleID: Int
     ): Response<ResponseBody> // Expecting a raw response body
 
+    @GET("vehicle")
+    @Headers(
+        "Content-Type: application/json",
+        "Accept: application/json",
+        "x-api-key: vekq8ne97uryr3mj4iudv8um07ggmhcat874q96jzvyypabgrm3zhyrwcgybm4hk"
+    )
+    suspend fun getVehicleDetails(
+        @Header("Authorization") authToken: String,
+        @Query("vehicleID") vehicleID: Int
+    ): Response<Vehicle>
+
 }
 
 //login start

@@ -65,6 +65,12 @@ class CustomRepository(context: Context) {
             }
         }
 
+    suspend fun getVehicleDetails(context: Context, vehicleID: Int): Response<Vehicle> {
+        Log.i("CustomRepository", "GET /vehicle")
+        val authToken = EncryptedSharedPredManager.getToken(context)
+        return apiService.getVehicleDetails("Bearer $authToken", vehicleID)
+    }
+
 }
 
 

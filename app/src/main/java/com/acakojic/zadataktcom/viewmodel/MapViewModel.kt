@@ -9,7 +9,6 @@ import android.graphics.drawable.Drawable
 import android.preference.PreferenceManager
 import android.util.Log
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,7 +18,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.AlertDialog
@@ -39,10 +37,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalConfiguration
 import com.acakojic.zadataktcom.service.CustomRepository
 import com.acakojic.zadataktcom.service.Vehicle
 
@@ -56,16 +51,16 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
+import androidx.navigation.NavController
 import coil.compose.rememberImagePainter
 import com.acakojic.zadataktcom.R
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 
 
-class MapViewModel(private val customRepository: CustomRepository, private val context: Context) :
-    ViewModel() {
-    private val _vehicles = MutableLiveData<List<Vehicle>?>() // This can be null
-    val vehicles: LiveData<List<Vehicle>?> = _vehicles // Match the type with MutableLiveData
+class MapViewModel(private val customRepository: CustomRepository, private val context: Context) : ViewModel() {
+    private val _vehicles = MutableLiveData<List<Vehicle>?>() //This can be null
+    val vehicles: LiveData<List<Vehicle>?> = _vehicles //Match type with MutableLiveData
 
     init {
         viewModelScope.launch {
@@ -138,7 +133,7 @@ fun VehicleImageWithFavorite(
             contentDescription = "Vehicle Image",
             modifier = Modifier
                 .fillMaxWidth()
-                .height(200.dp) // Or whatever height you desire
+                .height(200.dp)
         )
         IconToggleButton(
             checked = isFavorite.value,
@@ -172,19 +167,13 @@ fun VehicleDetailDialog(
     viewModel: MapViewModel,
 ) {
     if (vehicle != null) {
-        val configuration = LocalConfiguration.current
-        val screenWidth = configuration.screenWidthDp.dp
-        val imageWidth = screenWidth * 0.9f
 
         AlertDialog(
             onDismissRequest = onDismiss,
             text = {
                 VehicleCard(
                     vehicle = vehicle, viewModel = viewModel, modifier = Modifier
-                        .fillMaxWidth()
-//            .clip(RoundedCornerShape(13.dp))
-//            .background(Color.Black) // This sets the background color to black
-//            .shadow(8.dp, RoundedCornerShape(10.dp)), // Apply shadow with the same rounded corners
+                        .fillMaxWidth(), navController = null
                 )
             },
             confirmButton = {}
@@ -193,7 +182,8 @@ fun VehicleDetailDialog(
 }
 
 @Composable
-fun VehicleCard(vehicle: Vehicle, viewModel: MapViewModel, modifier: Modifier) {
+fun VehicleCard(vehicle: Vehicle, viewModel: MapViewModel, modifier: Modifier, navController: NavController?
+) {
     Column(
         modifier = modifier
     ) {
@@ -207,9 +197,11 @@ fun VehicleCard(vehicle: Vehicle, viewModel: MapViewModel, modifier: Modifier) {
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable {
-//                    VehicleInfo
-                    Log.d("VehicleCard", "Clickable: ${vehicle.vehicleID}")
-
+                    if (navController != null) {
+                        Log.d("VehicleCard", "Clickable: ${vehicle.vehicleID}")
+                        navController.navigate("vehicleDetails/${vehicle.vehicleID}")
+//                    ShowVehicleInfo(vehicleID = vehicle.vehicleID, viewModel = viewModel)
+                    }
                 }
         ) {
             Spacer(modifier = Modifier.height(16.dp))
@@ -236,7 +228,7 @@ fun VehicleCard(vehicle: Vehicle, viewModel: MapViewModel, modifier: Modifier) {
                 Text("${vehicle.price}€")
             }
         }
-        // end of this
+        //end of this
     }
 }
 
@@ -246,7 +238,7 @@ fun addMarkersToMap(
     vehicles: List<Vehicle>,
     onVehicleClick: (Vehicle) -> Unit
 ) {
-    mapView.overlays.clear()  // Clear existing overlays first
+    mapView.overlays.clear()  //Clear existing overlays first
 
     vehicles.forEach { vehicle ->
         val marker = Marker(mapView).apply {
@@ -262,12 +254,12 @@ fun addMarkersToMap(
 
             setOnMarkerClickListener { marker, mapView ->
                 onVehicleClick(vehicle)
-                true  // true to indicate that the event has been handled
+                true  //true to indicate that the event has been handled
             }
         }
         mapView.overlays.add(marker)
     }
-    mapView.invalidate()  // Refresh the map
+    mapView.invalidate()  //Refresh the map
 }
 
 fun getMarkerIconWithText(context: Context, vehicleTypeID: Int, price: Double): Drawable {
@@ -317,11 +309,12 @@ fun initializeMap(context: Context): MapView {
 //    mapView.isMultiTouchControls = true
     mapView.controller.setZoom(12.0)
     mapView.controller.setCenter(
+        //Belgrade starting location
         GeoPoint(
             44.81722374773659,
             20.460807455759323
         )
-    )  //Belgrade starting location
+    )
 
     return mapView
 }

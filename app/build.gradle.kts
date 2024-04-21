@@ -73,6 +73,7 @@ dependencies {
     implementation("androidx.compose.runtime:runtime-livedata:1.6.6")
     implementation ("io.coil-kt:coil-compose:1.4.0")
     implementation("androidx.wear.compose:compose-material:1.3.1") //for showing image
+    implementation ("androidx.navigation:navigation-compose:2.7.7")
     //my adding end
 
     testImplementation("junit:junit:4.13.2")

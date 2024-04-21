@@ -26,16 +26,19 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.acakojic.zadataktcom.factory.MapViewModelFactory
 import com.acakojic.zadataktcom.service.CustomRepository
 import com.acakojic.zadataktcom.service.Vehicle
 import com.acakojic.zadataktcom.ui.theme.ZadatakTcomTheme
 import com.acakojic.zadataktcom.viewmodel.FavoritesScreen
 import com.acakojic.zadataktcom.viewmodel.MapViewModel
+import com.acakojic.zadataktcom.viewmodel.ShowVehicleInfo
 import com.acakojic.zadataktcom.viewmodel.VehicleDetailDialog
 import com.acakojic.zadataktcom.viewmodel.VehicleMapScreen
 
@@ -44,7 +47,6 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             ZadatakTcomTheme {
-                // A surface container using the 'background' color from the theme
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
@@ -60,18 +62,22 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun MainScreen() {
     val navController = rememberNavController()
-    val context = LocalContext.current // Retrieve the current Compose local context
-    val customRepository = remember { CustomRepository(context) } // Initialize the repository with the context
+    val context = LocalContext.current
+    val customRepository =
+        remember { CustomRepository(context) }
 
-    // mapViewModel start
-    val mapViewModel: MapViewModel = viewModel(factory = MapViewModelFactory(
-        repository = customRepository, context = context))
+    //mapViewModel start
+    val mapViewModel: MapViewModel = viewModel(
+        factory = MapViewModelFactory(
+            repository = customRepository, context = context
+        )
+    )
 
     var showDialog by remember { mutableStateOf(false) }
     var selectedVehicle by remember { mutableStateOf<Vehicle?>(null) }
 
     if (showDialog) {
-        VehicleDetailDialog(selectedVehicle, viewModel = mapViewModel , onDismiss = {
+        VehicleDetailDialog(selectedVehicle, viewModel = mapViewModel, onDismiss = {
             showDialog = false
             selectedVehicle = null
         })
@@ -95,13 +101,23 @@ fun MainScreen() {
             }
 
             composable(Screen.Favorites.route) {
-                FavoritesScreen(viewModel = mapViewModel)
+                FavoritesScreen(viewModel = mapViewModel, navController = navController)
             }
+
+            composable(
+                "vehicleDetails/{vehicleID}",
+                arguments = listOf(navArgument("vehicleID") { type = NavType.IntType })
+            ) { backStackEntry ->
+                //Retrieve the vehicleID from the navigation argument
+                val vehicleID = backStackEntry.arguments?.getInt("vehicleID") ?: return@composable
+                ShowVehicleInfo(vehicleID = vehicleID, viewModel = mapViewModel)
+            }
+
         }
     }
 }
 
-// BottomNavigationBar composable that shows the navigation items
+//BottomNavigationBar composable that shows the navigation items
 @Composable
 fun BottomNavigationBar(navController: NavController) {
     val items = listOf(
@@ -117,7 +133,7 @@ fun BottomNavigationBar(navController: NavController) {
         items.forEach { screen ->
             val selected = currentRoute == screen.route
             val iconColor =
-                if (selected) Color(0xFFFFA500) else Color.White // orange if selected, white if not
+                if (selected) Color(0xFFFFA500) else Color.White //orange if selected, white if not
 
             BottomNavigationItem(
                 icon = {
@@ -143,14 +159,14 @@ fun BottomNavigationBar(navController: NavController) {
     }
 }
 
-// Define your routes/screens
+//Defines routes/screens
 sealed class Screen(val route: String, @DrawableRes val drawableId: Int) {
     object Map : Screen("map", R.drawable.nav_tab_map_icon)
     object List : Screen("list", R.drawable.nav_tab_list_icon)
     object Favorites : Screen("favorites", R.drawable.nav_tab_favorite_icon)
 }
 
-// Helper function to get the current route
+//This is helper function to get the current route
 @Composable
 fun currentRoute(navController: NavController): String? {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
