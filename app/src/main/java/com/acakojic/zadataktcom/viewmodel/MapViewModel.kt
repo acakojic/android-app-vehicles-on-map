@@ -10,29 +10,31 @@ import android.preference.PreferenceManager
 import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconToggleButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -45,15 +47,12 @@ import org.osmdroid.views.MapView
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.overlay.Marker
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.compose.ui.window.Dialog
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
-import androidx.wear.compose.material.dialog.Dialog
 import coil.compose.rememberImagePainter
 import com.acakojic.zadataktcom.R
 import org.osmdroid.config.Configuration
@@ -62,8 +61,8 @@ import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 
 class MapViewModel(private val customRepository: CustomRepository, private val context: Context) :
     ViewModel() {
-    private val _vehicles = MutableLiveData<List<Vehicle>>()
-    val vehicles: LiveData<List<Vehicle>> = _vehicles
+    private val _vehicles = MutableLiveData<List<Vehicle>?>() // This can be null
+    val vehicles: LiveData<List<Vehicle>?> = _vehicles // Match the type with MutableLiveData
 
     init {
         viewModelScope.launch {
@@ -80,23 +79,34 @@ class MapViewModel(private val customRepository: CustomRepository, private val c
             }
         }
     }
+
+    fun toggleFavorite(vehicleId: Int, isFavorite: Boolean) {
+        viewModelScope.launch {
+            val updatedList = _vehicles.value?.map { vehicle ->
+                if (vehicle.vehicleID == vehicleId) vehicle.copy(isFavorite = isFavorite) else vehicle
+            }
+            _vehicles.value = updatedList
+        }
+    }
 }
 
 @Composable
 fun VehicleMapScreen(viewModel: MapViewModel, onVehicleClick: (Vehicle) -> Unit) {
+    val vehicles by viewModel.vehicles.observeAsState(initial = listOf())
+
     val context = LocalContext.current
-    val vehicles = viewModel.vehicles.observeAsState(listOf()).value
     val mapView = remember { initializeMap(context) }
 
-    // Use Side Effects to update markers when vehicles data changes
     LaunchedEffect(vehicles) {
         mapView.overlays.clear()
-        addMarkersToMap(
-            context = context,
-            mapView = mapView,
-            vehicles = vehicles,
-            onVehicleClick = onVehicleClick
-        )
+        vehicles?.let {
+            addMarkersToMap(
+                context = context,
+                mapView = mapView,
+                vehicles = it,
+                onVehicleClick = onVehicleClick
+            )
+        }
         mapView.invalidate()
     }
 
@@ -104,7 +114,15 @@ fun VehicleMapScreen(viewModel: MapViewModel, onVehicleClick: (Vehicle) -> Unit)
 }
 
 @Composable
-fun VehicleImageWithFavorite(vehicle: Vehicle, onFavoriteToggle: (Vehicle) -> Unit) {
+fun VehicleImageWithFavorite(
+    vehicle: Vehicle,
+    viewModel: MapViewModel
+) {
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    val repository = remember { CustomRepository(context) }
+    val isFavorite = remember { mutableStateOf(vehicle.isFavorite) }
+
     Box(contentAlignment = Alignment.TopEnd) {
         Image(
             painter = rememberImagePainter(vehicle.imageURL),
@@ -114,15 +132,26 @@ fun VehicleImageWithFavorite(vehicle: Vehicle, onFavoriteToggle: (Vehicle) -> Un
                 .clip(RoundedCornerShape(8.dp))
         )
         IconToggleButton(
-            checked = vehicle.isFavorite,
-            onCheckedChange = {
-                onFavoriteToggle(vehicle)
+            checked = isFavorite.value,
+            onCheckedChange = { isChecked ->
+                coroutineScope.launch {
+
+                    val response = repository.addToFavorites(context, vehicle.vehicleID)
+
+                    if (response.isSuccess) {
+                        Log.d("VehicleImageWithFavorite", "Favorites updated successfully.")
+                        viewModel.toggleFavorite(vehicle.vehicleID, isChecked)
+                        isFavorite.value = isChecked
+                    } else {
+                        Log.e("VehicleImageWithFavorite", "Error updating favorites.")
+                    }
+                }
             }
         ) {
             Icon(
                 painter = painterResource(id = R.drawable.nav_tab_favorite_icon),
                 contentDescription = "Favorite",
-                tint = (if (vehicle.isFavorite) Color(0xFFFFA500) else Color.White) // orange if favorite, white if not
+                tint = if (isFavorite.value) Color(0xFFFFA500) else Color.White
             )
         }
     }
@@ -132,7 +161,7 @@ fun VehicleImageWithFavorite(vehicle: Vehicle, onFavoriteToggle: (Vehicle) -> Un
 fun VehicleDetailDialog(
     vehicle: Vehicle?,
     onDismiss: () -> Unit,
-    onFavoriteToggle: (Vehicle) -> Unit
+    viewModel: MapViewModel,
 ) {
     if (vehicle != null) {
         val configuration = LocalConfiguration.current
@@ -148,15 +177,8 @@ fun VehicleDetailDialog(
                         .padding(horizontal = 0.dp)
                 ) {
 
-                    VehicleImageWithFavorite(vehicle = vehicle, onFavoriteToggle = onFavoriteToggle)
-
-//                        Image(
-//                            painter = rememberImagePainter(vehicle.imageURL),
-//                            contentDescription = "Vozilo slika",
-//                        modifier = Modifier
-////                            .size(imageWidth) //set fixed size
-//                            .clip(RoundedCornerShape(8.dp))
-//                        )
+                    VehicleImageWithFavorite(vehicle = vehicle,
+                            viewModel = viewModel)
 
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(text = vehicle.name)
@@ -166,7 +188,18 @@ fun VehicleDetailDialog(
                             .padding(horizontal = 0.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("${vehicle.rating}")
+                        Text(
+                            text = "${vehicle.rating}",
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                fontSize = MaterialTheme.typography.bodyLarge.fontSize * 0.7
+                            )
+                        )
+                        Icon(
+                            imageVector = Icons.Default.Star,
+                            contentDescription = "Rating Star",
+                            modifier = Modifier.size(16.dp),
+                            tint = Color.White
+                        )
                         Spacer(Modifier.weight(1f))
                         Text("${vehicle.price}€")
                     }
@@ -176,13 +209,8 @@ fun VehicleDetailDialog(
             },
             confirmButton = {}
         )
-//        Column {
-//
-//            VehicleImageWithFavorite(vehicle = vehicle, onFavoriteToggle = onFavoriteToggle)
-//        }
     }
 }
-
 
 fun addMarkersToMap(
     context: Context,
@@ -196,7 +224,7 @@ fun addMarkersToMap(
         val marker = Marker(mapView).apply {
             position = GeoPoint(vehicle.location.latitude, vehicle.location.longitude)
             title = vehicle.name
-            snippet = "Price: ${vehicle.price}€"
+            snippet = "${vehicle.price}€"
             setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
             icon = getMarkerIconWithText(
                 context = context,
@@ -206,7 +234,7 @@ fun addMarkersToMap(
 
             setOnMarkerClickListener { marker, mapView ->
                 onVehicleClick(vehicle)
-                true  // Return true to indicate that the event has been handled
+                true  // true to indicate that the event has been handled
             }
         }
         mapView.overlays.add(marker)
@@ -224,7 +252,7 @@ fun getMarkerIconWithText(context: Context, vehicleTypeID: Int, price: Double): 
     }
 
     drawable?.let {
-        // Create a bitmap from the drawable
+        // bitmap from the drawable
         val width = if (it.intrinsicWidth > 0) it.intrinsicWidth else 100
         val height = if (it.intrinsicHeight > 0) it.intrinsicHeight else 100
 
@@ -233,11 +261,11 @@ fun getMarkerIconWithText(context: Context, vehicleTypeID: Int, price: Double): 
         it.setBounds(0, 0, canvas.width, canvas.height)
         it.draw(canvas)
 
-        // Draw text on the bitmap
+        // Draw text
         val text = "$${price}"
         val paint = Paint().apply {
             color = android.graphics.Color.WHITE
-            textSize = 30f // Adjust size as needed
+            textSize = 30f
             textAlign = Paint.Align.CENTER
         }
         // Calculate vertical position to center text

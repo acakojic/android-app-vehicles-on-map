@@ -77,14 +77,9 @@ fun MainScreen() {
     var selectedVehicle by remember { mutableStateOf<Vehicle?>(null) }
 
     if (showDialog) {
-        VehicleDetailDialog(selectedVehicle, onDismiss = {
+        VehicleDetailDialog(selectedVehicle, viewModel = mapViewModel , onDismiss = {
             showDialog = false
             selectedVehicle = null
-        }, onFavoriteToggle = { vehicle ->
-//            vehicle.isFavorite = !vehicle.isFavorite
-            // Here, also update the favorite status in your repository or ViewModel
-            // For example: viewModel.toggleFavorite(vehicle)
-//            viewModel.toggleFavorite(vehicle)
         })
     }
 
