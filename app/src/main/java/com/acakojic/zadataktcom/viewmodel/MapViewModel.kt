@@ -9,6 +9,8 @@ import android.graphics.drawable.Drawable
 import android.preference.PreferenceManager
 import android.util.Log
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -38,6 +40,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import com.acakojic.zadataktcom.service.CustomRepository
@@ -124,18 +127,23 @@ fun VehicleImageWithFavorite(
     val isFavorite = remember { mutableStateOf(vehicle.isFavorite) }
 
     Box(contentAlignment = Alignment.TopEnd) {
+
         Image(
-            painter = rememberImagePainter(vehicle.imageURL),
+            painter = rememberImagePainter(
+                data = vehicle.imageURL,
+                builder = {
+                    crossfade(true)
+                }
+            ),
             contentDescription = "Vehicle Image",
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(8.dp))
+                .height(200.dp) // Or whatever height you desire
         )
         IconToggleButton(
             checked = isFavorite.value,
             onCheckedChange = { isChecked ->
                 coroutineScope.launch {
-
                     val response = repository.addToFavorites(context, vehicle.vehicleID)
 
                     if (response.isSuccess) {
@@ -171,44 +179,64 @@ fun VehicleDetailDialog(
         AlertDialog(
             onDismissRequest = onDismiss,
             text = {
-                Column(
-                    modifier = Modifier
+                VehicleCard(
+                    vehicle = vehicle, viewModel = viewModel, modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 0.dp)
-                ) {
-
-                    VehicleImageWithFavorite(vehicle = vehicle,
-                            viewModel = viewModel)
-
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(text = vehicle.name)
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 0.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "${vehicle.rating}",
-                            style = MaterialTheme.typography.bodyMedium.copy(
-                                fontSize = MaterialTheme.typography.bodyLarge.fontSize * 0.7
-                            )
-                        )
-                        Icon(
-                            imageVector = Icons.Default.Star,
-                            contentDescription = "Rating Star",
-                            modifier = Modifier.size(16.dp),
-                            tint = Color.White
-                        )
-                        Spacer(Modifier.weight(1f))
-                        Text("${vehicle.price}€")
-                    }
-
-
-                }
+//            .clip(RoundedCornerShape(13.dp))
+//            .background(Color.Black) // This sets the background color to black
+//            .shadow(8.dp, RoundedCornerShape(10.dp)), // Apply shadow with the same rounded corners
+                )
             },
             confirmButton = {}
         )
+    }
+}
+
+@Composable
+fun VehicleCard(vehicle: Vehicle, viewModel: MapViewModel, modifier: Modifier) {
+    Column(
+        modifier = modifier
+    ) {
+
+        VehicleImageWithFavorite(
+            vehicle = vehicle,
+            viewModel = viewModel
+        )
+
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable {
+//                    VehicleInfo
+                    Log.d("VehicleCard", "Clickable: ${vehicle.vehicleID}")
+
+                }
+        ) {
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(text = vehicle.name)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 0.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "${vehicle.rating}",
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        fontSize = MaterialTheme.typography.bodyLarge.fontSize * 0.7
+                    )
+                )
+                Icon(
+                    imageVector = Icons.Default.Star,
+                    contentDescription = "Rating Star",
+                    modifier = Modifier.size(16.dp),
+                    tint = Color.White
+                )
+                Spacer(Modifier.weight(1f))
+                Text("${vehicle.price}€")
+            }
+        }
+        // end of this
     }
 }
 

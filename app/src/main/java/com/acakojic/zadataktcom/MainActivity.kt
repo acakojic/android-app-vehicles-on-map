@@ -7,26 +7,18 @@ import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image
 import androidx.compose.material.BottomNavigation
 import androidx.compose.material.BottomNavigationItem
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.platform.LocalContext
@@ -38,11 +30,11 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import coil.compose.rememberImagePainter
 import com.acakojic.zadataktcom.factory.MapViewModelFactory
 import com.acakojic.zadataktcom.service.CustomRepository
 import com.acakojic.zadataktcom.service.Vehicle
 import com.acakojic.zadataktcom.ui.theme.ZadatakTcomTheme
+import com.acakojic.zadataktcom.viewmodel.FavoritesScreen
 import com.acakojic.zadataktcom.viewmodel.MapViewModel
 import com.acakojic.zadataktcom.viewmodel.VehicleDetailDialog
 import com.acakojic.zadataktcom.viewmodel.VehicleMapScreen
@@ -70,6 +62,8 @@ fun MainScreen() {
     val navController = rememberNavController()
     val context = LocalContext.current // Retrieve the current Compose local context
     val customRepository = remember { CustomRepository(context) } // Initialize the repository with the context
+
+    // mapViewModel start
     val mapViewModel: MapViewModel = viewModel(factory = MapViewModelFactory(
         repository = customRepository, context = context))
 
@@ -82,6 +76,8 @@ fun MainScreen() {
             selectedVehicle = null
         })
     }
+
+    // mapViewModel end
 
     Scaffold(
         bottomBar = { BottomNavigationBar(navController) }
@@ -96,6 +92,10 @@ fun MainScreen() {
                     selectedVehicle = vehicle
                     showDialog = true
                 }
+            }
+
+            composable(Screen.Favorites.route) {
+                FavoritesScreen(viewModel = mapViewModel)
             }
         }
     }
