@@ -50,7 +50,7 @@ class FavoriteViewModel() {
 fun FavoritesScreen(viewModel: MapViewModel, navController: NavHostController) {
     //tthis will hold the list of favorite vehicles
     val favoriteVehicles =
-        viewModel.vehicles.observeAsState().value?.filter { it.isFavorite } ?: listOf()
+        viewModel.allVehicles.observeAsState().value?.filter { it.isFavorite } ?: listOf()
 
     ShowVehiclesInList(
         vehicles = favoriteVehicles, viewModel = viewModel, navController = navController,

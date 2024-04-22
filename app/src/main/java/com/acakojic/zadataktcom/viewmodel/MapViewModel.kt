@@ -63,12 +63,11 @@ class MapViewModel(private val customRepository: CustomRepository, private val c
     private val _vehicles = MutableLiveData<List<Vehicle>?>() //This can be null
     val vehicles: LiveData<List<Vehicle>?> = _vehicles //Match type with MutableLiveDatad
 
-    private val _allVhicles = MutableLiveData<List<Vehicle>?>() //This can be null
-    val allVhicles: LiveData<List<Vehicle>?> = _allVhicles //Match type with MutableLiveDatad
+    private val _allVehicles = MutableLiveData<List<Vehicle>?>() //This can be null
+    val allVehicles: LiveData<List<Vehicle>?> = _allVehicles //Match type with MutableLiveDatad
 
     var selectedVehicleType = mutableStateOf(VehicleType.Auto)
         private set  // Make the setter private to control modifications through a method
-
 
     //State for UI to react
     var uiState = mutableStateOf(VehicleType.Auto)
@@ -85,8 +84,11 @@ class MapViewModel(private val customRepository: CustomRepository, private val c
                 _vehicles.value = response.body()!!.filter {
                     it.vehicleTypeID == selectedVehicleType.value.typeId
                 }
+                _allVehicles.value = response.body()!!
+
             } else {
                 _vehicles.value = emptyList()
+                _allVehicles.value = emptyList()
             }
         }
     }
@@ -105,17 +107,15 @@ class MapViewModel(private val customRepository: CustomRepository, private val c
             val updatedList = _vehicles.value?.map { vehicle ->
                 if (vehicle.vehicleID == vehicleId) vehicle.copy(isFavorite = isFavorite) else vehicle
             }
+
+            val updatedListAllVehicles = _allVehicles.value?.map { vehicle ->
+                if (vehicle.vehicleID == vehicleId) vehicle.copy(isFavorite = isFavorite) else vehicle
+            }
+
             _vehicles.value = updatedList
+            _allVehicles.value = updatedListAllVehicles
         }
     }
-
-//    fun updateMapMarkers(
-//        mapView: MapView,
-//        vehicles: List<Vehicle>,
-//        onVehicleClick: (Vehicle) -> Unit
-//    ) {
-//        addMarkersToMap(context, mapView, vehicles, onVehicleClick)
-//    }
 
     fun updateMapMarkers(mapView: MapView, vehicles: List<Vehicle>, onVehicleClick: (Vehicle) -> Unit) {
         addMarkersToMap(context, mapView, vehicles, onVehicleClick)
