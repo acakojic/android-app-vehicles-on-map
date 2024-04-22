@@ -42,18 +42,19 @@ class AllVehiclesViewModel {
 
 }
 
-@Composable
+/**
+ * Displays a screen that lists vehicles with options to search and sort.
+ *
+ * @param viewModel The view model that provides vehicle data and operations.
+ * @param navController Navigation controller for navigating between screens.
+ */
+@Composable //todo refactor this method later
 fun ShowVehiclesScreen(viewModel: MapViewModel, navController: NavHostController) {
     var context = LocalContext.current
-
     val searchQuery by viewModel.searchQuery
-
     val selectedTab by viewModel.selectedVehicleType
-
     val vehiclesByType = viewModel.vehiclesByType.observeAsState(listOf()).value ?: listOf()
-
     var selectedSortOrder by remember { mutableStateOf(SortOrder.PriceAsc) }
-
     val mapView = remember { initializeMap(context) }
 
     var sortedAndFilteredVehicles = vehiclesByType
@@ -127,6 +128,9 @@ fun ShowVehiclesScreen(viewModel: MapViewModel, navController: NavHostController
     }
 }
 
+/**
+ * Displays search and sorting options for the list of vehicles.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SearchAndSortRow(
@@ -158,7 +162,7 @@ fun SearchAndSortRow(
         Box(modifier = Modifier.wrapContentSize(Alignment.TopEnd)) {
             Text(
                 text = "Sort",
-                color = Color(0xFFFFA500), // Use theme color here if possible
+                color = Color(0xFFFFA500), //Use theme color here if possible
                 modifier = Modifier
                     .clickable { expanded = true }
                     .padding(horizontal = 16.dp, vertical = 8.dp)

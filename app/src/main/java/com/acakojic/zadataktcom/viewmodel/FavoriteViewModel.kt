@@ -225,13 +225,6 @@ fun CustomRow(
 
 @Composable
 fun CenteredText(text: String) {
-//    Box(
-//        modifier = Modifier
-//            .fillMaxSize(),
-//        contentAlignment = Alignment.Center
-//    ) {
-//        Text(text = text)
-//    }
     Text(
         text = text,
         modifier = Modifier
