@@ -1,5 +1,6 @@
 package com.acakojic.zadataktcom.viewmodel
 
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -21,7 +22,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -36,6 +36,7 @@ import androidx.compose.ui.unit.dp
 import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.material.icons.filled.KeyboardArrowLeft
+import androidx.compose.runtime.collectAsState
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavController
 import androidx.navigation.NavHostController
@@ -49,8 +50,8 @@ class FavoriteViewModel() {
 @Composable
 fun FavoritesScreen(viewModel: MapViewModel, navController: NavHostController) {
     //tthis will hold the list of favorite vehicles
-    val favoriteVehicles =
-        viewModel.allVehicles.observeAsState().value?.filter { it.isFavorite } ?: listOf()
+    val allVehicles = viewModel.allVehicles.collectAsState().value  // This collects the StateFlow and observes updates
+    val favoriteVehicles = allVehicles.filter { it.isFavorite }
 
     ShowVehiclesInList(
         vehicles = favoriteVehicles, viewModel = viewModel, navController = navController,
@@ -101,6 +102,7 @@ fun ShowVehicleInfo(vehicleID: Int, viewModel: MapViewModel) {
                     setVehicle(response.body())
                 } else {
                     //todo error message
+                    Log.e("GET /getVehicleDetails", "Error" )
                 }
             } finally {
                 setLoading(false)

@@ -36,13 +36,11 @@ import com.acakojic.zadataktcom.data.Vehicle
 import com.acakojic.zadataktcom.factory.MapViewModelFactory
 import com.acakojic.zadataktcom.service.CustomRepository
 import com.acakojic.zadataktcom.ui.theme.ZadatakTcomTheme
-import com.acakojic.zadataktcom.viewmodel.FavoritesScreen
-import com.acakojic.zadataktcom.viewmodel.MapViewModel
-import com.acakojic.zadataktcom.viewmodel.ShowVehicleInfo
-import com.acakojic.zadataktcom.viewmodel.ShowVehiclesScreen
-import com.acakojic.zadataktcom.viewmodel.VehicleDetailDialog
-import com.acakojic.zadataktcom.viewmodel.VehicleMapScreen
+import com.acakojic.zadataktcom.viewmodel.*
 
+/**
+ * Main activity for the application, setting the theme and content for the application.
+ */
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -59,101 +57,57 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-// MainScreen composable that sets up the navigation
+/**
+ * Sets up the main screen layout including navigation and handling vehicle detail dialogs.
+ */
 @Composable
 fun MainScreen() {
     val navController = rememberNavController()
     val context = LocalContext.current
-    val customRepository =
-        remember { CustomRepository(context) }
-
-    //mapViewModel start
-    val mapViewModel: MapViewModel = viewModel(
-        factory = MapViewModelFactory(
-            repository = customRepository, context = context
-        )
-    )
-
+    val customRepository = remember { CustomRepository(context) }
+    val mapViewModel: MapViewModel = viewModel(factory = MapViewModelFactory(repository = customRepository, context = context))
     var showDialog by remember { mutableStateOf(false) }
     var selectedVehicle by remember { mutableStateOf<Vehicle?>(null) }
 
     if (showDialog) {
-        VehicleDetailDialog(selectedVehicle,
-            viewModel = mapViewModel,
-            navController = navController,
-            onDismiss = {
-                showDialog = false
-                selectedVehicle = null
-            })
+        VehicleDetailDialog(selectedVehicle, viewModel = mapViewModel, navController = navController, onDismiss = {
+            showDialog = false
+            selectedVehicle = null
+        })
     }
 
-    // mapViewModel end
-
-    Scaffold(
-        bottomBar = { BottomNavigationBar(navController) }
-    ) { innerPadding ->
-        NavHost(
-            navController,
-            startDestination = Screen.Map.route,
-            modifier = Modifier.padding(innerPadding)
-        ) {
-            composable(Screen.Map.route) {
-                VehicleMapScreen(mapViewModel) { vehicle ->
-                    selectedVehicle = vehicle
-                    showDialog = true
+    Scaffold(bottomBar = { BottomNavigationBar(navController) }) { innerPadding ->
+        NavHost(navController, startDestination = Screen.Map.route, modifier = Modifier.padding(innerPadding)) {
+            composable(Screen.Map.route) { VehicleMapScreen(mapViewModel) { vehicle ->
+                selectedVehicle = vehicle
+                showDialog = true
+            }}
+            composable(Screen.List.route) { ShowVehiclesScreen(viewModel = mapViewModel, navController = navController) }
+            composable(Screen.Favorites.route) { FavoritesScreen(viewModel = mapViewModel, navController = navController) }
+            composable("vehicleDetails/{vehicleID}", arguments = listOf(navArgument("vehicleID") { type = NavType.IntType })) { backStackEntry ->
+                backStackEntry.arguments?.getInt("vehicleID")?.let { vehicleID ->
+                    ShowVehicleInfo(vehicleID = vehicleID, viewModel = mapViewModel)
                 }
             }
-
-            composable(Screen.List.route) {
-                ShowVehiclesScreen(viewModel = mapViewModel, navController = navController)
-            }
-
-            composable(Screen.Favorites.route) {
-                FavoritesScreen(viewModel = mapViewModel, navController = navController)
-            }
-
-            composable(
-                "vehicleDetails/{vehicleID}",
-                arguments = listOf(navArgument("vehicleID") { type = NavType.IntType })
-            ) { backStackEntry ->
-                //Retrieve the vehicleID from the navigation argument
-                val vehicleID = backStackEntry.arguments?.getInt("vehicleID") ?: return@composable
-                ShowVehicleInfo(vehicleID = vehicleID, viewModel = mapViewModel)
-            }
-
         }
     }
 }
 
-//BottomNavigationBar composable that shows the navigation items
+/**
+ * Represents the bottom navigation bar of the app.
+ */
 @Composable
 fun BottomNavigationBar(navController: NavController) {
-    val items = listOf(
-        Screen.Map,
-        Screen.List,
-        Screen.Favorites
-    )
-    BottomNavigation(
-        backgroundColor = Color.Black,
-//        contentColor = Color.Black
-    ) {
+    val items = listOf(Screen.Map, Screen.List, Screen.Favorites)
+    BottomNavigation(backgroundColor = Color.Black) {
         val currentRoute = currentRoute(navController)
         items.forEach { screen ->
-            val selected = currentRoute == screen.route
-            val iconColor =
-                if (selected) Color(0xFFFFA500) else Color.White //orange if selected, white if not
-
             BottomNavigationItem(
                 icon = {
-                    Image(
-                        painter = painterResource(id = screen.drawableId),
-                        contentDescription = null,
-                        modifier = Modifier.size(30.dp), // Adjust the size as needed
-                        colorFilter = ColorFilter.tint(iconColor)
-                    )
+                    Image(painter = painterResource(id = screen.drawableId), contentDescription = null, modifier = Modifier.size(30.dp), colorFilter = ColorFilter.tint(if (currentRoute == screen.route) Color(0xFFFFA500) else Color.White))
                 },
-                label = { }, // No label needed
-                selected = selected,
+                label = {},
+                selected = currentRoute == screen.route,
                 onClick = {
                     if (currentRoute != screen.route) {
                         navController.navigate(screen.route) {
@@ -167,16 +121,20 @@ fun BottomNavigationBar(navController: NavController) {
     }
 }
 
-//Defines routes/screens
-sealed class Screen(val route: String, @DrawableRes val drawableId: Int) {
-    object Map : Screen("map", R.drawable.nav_tab_map_icon)
-    object List : Screen("list", R.drawable.nav_tab_list_icon)
-    object Favorites : Screen("favorites", R.drawable.nav_tab_favorite_icon)
-}
-
-//This is helper function to get the current route
+/**
+ * Helper to determine the current navigation route.
+ */
 @Composable
 fun currentRoute(navController: NavController): String? {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     return navBackStackEntry?.destination?.route
+}
+
+/**
+ * Defines the navigation routes used in the app.
+ */
+sealed class Screen(val route: String, @DrawableRes val drawableId: Int) {
+    object Map : Screen("map", R.drawable.nav_tab_map_icon)
+    object List : Screen("list", R.drawable.nav_tab_list_icon)
+    object Favorites : Screen("favorites", R.drawable.nav_tab_favorite_icon)
 }

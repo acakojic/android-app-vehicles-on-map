@@ -88,11 +88,7 @@ fun ShowVehiclesScreen(viewModel: MapViewModel, navController: NavHostController
     // Update the map markers when the search query changes
     LaunchedEffect(searchQuery) {
         if (filteredVehicles.isNotEmpty()) {
-//            if (filteredVehicles.size == 1) { ovo je bilo
-            // If there is only one vehicle in the search results, update the map markers to show just that vehicle
-            viewModel.updateMapMarkers(mapView, filteredVehicles) { vehicle ->
-                // Handle vehicle marker click event
-            }
+            viewModel.updateMapMarkers(mapView, filteredVehicles) { vehicle -> }
         }
     }
 

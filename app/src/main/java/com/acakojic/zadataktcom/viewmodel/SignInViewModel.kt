@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.acakojic.zadataktcom.data.SignInUiState
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -59,12 +60,3 @@ class SignInViewModel(private val customRepository: CustomRepository, private va
         _uiState.value = SignInUiState(isLoggedIn = false)
     }
 }
-
-data class SignInUiState(
-    val isLoading: Boolean = false,
-    val isSuccess: Boolean = false,
-    val isError: Boolean = false,
-    val token: String? = null,
-    val errorMessage: String = "",
-    val isLoggedIn: Boolean = false
-)

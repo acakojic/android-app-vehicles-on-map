@@ -19,6 +19,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
@@ -27,6 +29,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -44,7 +47,6 @@ import org.osmdroid.views.MapView
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.overlay.Marker
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
@@ -54,6 +56,9 @@ import androidx.navigation.NavController
 import coil.compose.rememberImagePainter
 import com.acakojic.zadataktcom.R
 import com.acakojic.zadataktcom.data.Vehicle
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 
@@ -63,8 +68,8 @@ class MapViewModel(private val customRepository: CustomRepository, private val c
     private val _vehiclesByType = MutableLiveData<List<Vehicle>?>()
     val vehiclesByType: LiveData<List<Vehicle>?> = _vehiclesByType
 
-    private val _allVehicles = MutableLiveData<List<Vehicle>?>()
-    val allVehicles: LiveData<List<Vehicle>?> = _allVehicles
+    private val _allVehicles = MutableStateFlow<List<Vehicle>>(emptyList())
+    val allVehicles: StateFlow<List<Vehicle>> = _allVehicles.asStateFlow()
 
     var selectedVehicleType = mutableStateOf(VehicleType.Auto)
         private set
@@ -101,11 +106,16 @@ class MapViewModel(private val customRepository: CustomRepository, private val c
     fun toggleFavorite(vehicleId: Int, isFavorite: Boolean) {
         viewModelScope.launch {
 
-            _allVehicles.value = _allVehicles.value?.map { vehicle ->
-                if (vehicle.vehicleID == vehicleId) vehicle.copy(isFavorite = isFavorite) else vehicle
-            }
-            _vehiclesByType.value = _vehiclesByType.value?.map { vehicle ->
-                if (vehicle.vehicleID == vehicleId) vehicle.copy(isFavorite = isFavorite) else vehicle
+            viewModelScope.launch {
+                val result = customRepository.addToFavorites(context, vehicleId)
+                if (result.isSuccess) {
+                    _allVehicles.value = _allVehicles.value.map { vehicle ->
+                        if (vehicle.vehicleID == vehicleId) vehicle.copy(isFavorite = isFavorite) else vehicle
+                    }
+                    _vehiclesByType.value = _vehiclesByType.value?.map { vehicle ->
+                        if (vehicle.vehicleID == vehicleId) vehicle.copy(isFavorite = isFavorite) else vehicle
+                    }
+                }
             }
         }
     }
@@ -156,40 +166,40 @@ fun VehicleImageWithFavorite(
     val coroutineScope = rememberCoroutineScope()
     val repository = remember { CustomRepository(context) }
 
+    val vehicles = viewModel.allVehicles.collectAsState()
+    val vehicle = vehicles.value.find { it.vehicleID == vehicle.vehicleID }
+
+
     Box(contentAlignment = Alignment.TopEnd) {
 
-        Image(
-            painter = rememberImagePainter(
-                data = vehicle.imageURL,
-                builder = {
-                    crossfade(true)
-                }
-            ),
-            contentDescription = "Vehicle Image",
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(200.dp)
-        )
-        IconToggleButton(
-            checked = vehicle.isFavorite,
-            onCheckedChange = { isChecked ->
-                coroutineScope.launch {
-                    val response = repository.addToFavorites(context, vehicle.vehicleID)
-
-                    if (response.isSuccess) {
-                        viewModel.toggleFavorite(vehicle.vehicleID, isChecked)
-                    } else {
-                        Log.e("VehicleImageWithFavorite", "Error updating favorites.")
+        if (vehicle != null) {
+            Image(
+                painter = rememberImagePainter(
+                    data = vehicle.imageURL,
+                    builder = {
+                        crossfade(true)
                     }
-                }
-            }
-        ) {
-            Icon(
-                painter = painterResource(id = R.drawable.nav_tab_favorite_icon),
-                contentDescription = "Favorite",
-//                tint = if (isFavorite.value) Color(0xFFFFA500) else Color.White //good for others tabs
-                        tint = if (vehicle.isFavorite) Color(0xFFFFA500) else Color.White //good for others tabs
+                ),
+                contentDescription = "Vehicle Image",
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(200.dp)
             )
+        }
+
+        vehicle?.let {
+            IconToggleButton(
+                checked = it.isFavorite,
+                onCheckedChange = { isChecked ->
+                    viewModel.toggleFavorite(it.vehicleID, isChecked)
+                }
+            ) {
+                Icon(
+                    imageVector = if (it.isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                    contentDescription = "Toggle Favorite",
+                    modifier = Modifier.size(33.dp),
+                )
+            }
         }
     }
 }
@@ -358,5 +368,6 @@ fun initializeMap(context: Context): MapView {
 
     return mapView
 }
+
 
 
