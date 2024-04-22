@@ -43,6 +43,11 @@ import com.acakojic.zadataktcom.viewmodel.SignInViewModel
 import com.acakojic.zadataktcom.service.CustomRepository
 import com.acakojic.zadataktcom.ui.theme.ZadatakTcomTheme
 
+//for later
+//todo needs to add strings to strings.xml
+//todo network catch errors
+//todo refactor code
+//todo add more logs
 class SignInActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -51,7 +56,7 @@ class SignInActivity : ComponentActivity() {
         val context: Context = this
 
         val authRepository =
-            CustomRepository(context) //todo You should have a better way to provide this, like using Dagger/Hilt for dependency injection
+            CustomRepository(context)
         val signInViewModel = ViewModelProvider(
             this,
             SignInViewModelFactory(authRepository, context)
