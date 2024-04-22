@@ -23,7 +23,6 @@ import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TextFieldDefaults.textFieldColors
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -38,7 +37,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
-import com.acakojic.zadataktcom.service.Vehicle
 
 class AllVehiclesViewModel {
 }
@@ -47,15 +45,26 @@ class AllVehiclesViewModel {
 fun ShowVehiclesScreen(viewModel: MapViewModel, navController: NavHostController) {
     var context = LocalContext.current
     var searchQuery by remember { mutableStateOf("") }
-
     val selectedTab by viewModel.selectedVehicleType
 
     val allVehicles = viewModel.vehicles.observeAsState(listOf()).value ?: listOf()
-    var sortedAndFilteredVehicles by remember { mutableStateOf(allVehicles) }
-
     var selectedSortOrder by remember { mutableStateOf(SortOrder.PriceAsc) }
 
     val mapView = remember { initializeMap(context) }
+
+    var sortedAndFilteredVehicles = allVehicles
+        .filter { vehicle ->
+            vehicle.vehicleTypeID == selectedTab.typeId &&
+                    vehicle.name.contains(searchQuery, ignoreCase = true)
+        }
+        .sortedWith(
+            compareBy({ vehicle ->
+                // You might need a ternary-like operation for Kotlin
+                if (selectedSortOrder == SortOrder.PriceDesc) -vehicle.price else vehicle.price
+            }, { vehicle ->
+                vehicle.name
+            })
+        )
 
     LaunchedEffect(searchQuery, selectedSortOrder) {
         sortedAndFilteredVehicles = allVehicles
@@ -68,12 +77,16 @@ fun ShowVehiclesScreen(viewModel: MapViewModel, navController: NavHostController
             }
     }
 
-    LaunchedEffect(viewModel.vehicles) {
-        mapView.overlays.clear()
-        viewModel.vehicles.value?.let { vehicles ->
-            viewModel.updateMapMarkers(mapView, vehicles) { vehicle ->
-//            selectedVehicle = vehicle
-//            showDialog = true)
+    val filteredVehicles = viewModel.vehicles.observeAsState(listOf()).value
+        ?.filter { it.name.contains(searchQuery, ignoreCase = true) }
+        ?: listOf()
+
+    // Update the map markers when the search query changes
+    LaunchedEffect(searchQuery) {
+        if (filteredVehicles.size == 1) {
+            // If there is only one vehicle in the search results, update the map markers to show just that vehicle
+            viewModel.updateMapMarkers(mapView, filteredVehicles) { vehicle ->
+                // Handle vehicle marker click event
             }
         }
     }
@@ -108,112 +121,8 @@ fun ShowVehiclesScreen(viewModel: MapViewModel, navController: NavHostController
                 )
             }
         }
-
-        // Ensure that vehicle updates are reflected in the UI
-//        val allVehicles by viewModel.vehicles.observeAsState(emptyList())
-//        val sortedAndFilteredVehicles = allVehicles?.filter { it.vehicleTypeID == selectedTab.typeId }
-
-        // Include additional filtering/sorting if necessary
-
-//        if (sortedAndFilteredVehicles != null) {
-//
-//            LazyColumn {
-//                items(sortedAndFilteredVehicles) { vehicle ->
-//                    Spacer(modifier = Modifier.height(20.dp))
-//                    VehicleCard(
-//                        vehicle = vehicle,
-//                        viewModel = viewModel,
-//                        modifier = getModifierForFavorite(),
-//                        navController = navController
-//                    )
-//                }
-//            }
-//        }
     }
 }
-
-//@OptIn(ExperimentalMaterial3Api::class)
-//@Composable
-//fun SearchAndSortRow(
-//    searchText: String,
-//    onSearchQueryChanged: (String) -> Unit,
-//    selectedSortOrder: SortOrder,
-//    onSortOrderSelected: (SortOrder) -> Unit
-//) {
-//    Row(
-//        modifier = Modifier
-//            .fillMaxWidth()
-//            .padding(horizontal = 16.dp, vertical = 8.dp),
-//        verticalAlignment = Alignment.CenterVertically
-//    ) {
-//        TextField(
-//            value = searchText,
-//            onValueChange = onSearchQueryChanged,
-//            modifier = Modifier
-//                .weight(1f)
-//                .padding(end = 8.dp), // This adds space after the TextField
-//            placeholder = { Text("Pretraži vozila") },
-//            singleLine = true,
-//            colors = TextFieldDefaults.textFieldColors(containerColor = Color.Transparent)
-//        )
-//
-//        // Spacer with fixed width for space between TextField and Sort text
-//        Spacer(modifier = Modifier.width(8.dp))
-//
-//        SortDropdownMenu(
-//            selectedSortOrder = selectedSortOrder,
-//            onSortOrderSelected = onSortOrderSelected
-//        )
-//    }
-//}
-
-
-//@Composable
-//fun SortDropdownMenu(
-//    selectedSortOrder: SortOrder,
-//    onSortOrderSelected: (SortOrder) -> Unit
-//) {
-//    var expanded by remember { mutableStateOf(false) }
-//
-//    Box(modifier = Modifier.wrapContentSize(Alignment.TopEnd)) {
-//        Text(
-//            text = selectedSortOrder.label,
-//            modifier = Modifier
-//                .fillMaxWidth()
-//                .clickable { expanded = true }
-//                .padding(16.dp)
-//        )
-//        DropdownMenu(
-//            expanded = expanded,
-//            onDismissRequest = { expanded = false }
-//        ) {
-//            SortOrder.entries.forEach { sortOrder ->
-//                DropdownMenuItem(
-//                    onClick = {
-//                        onSortOrderSelected(sortOrder)
-//                        expanded = false
-//                    },
-//                    text = {
-//                        Row(
-//                            modifier = Modifier.fillMaxWidth(),
-//                            horizontalArrangement = Arrangement.SpaceBetween
-//                        ) {
-//                            Text(text = sortOrder.label)
-//                            if (selectedSortOrder == sortOrder) {
-//                                Icon(
-//                                    imageVector = Icons.Filled.Check,
-//                                    contentDescription = "Selected",
-//                                    tint = Color(0xFFFFA500) // Orange color for the check icon
-//                                )
-//                            }
-//                        }
-//                    }
-//                )
-//            }
-//        }
-//    }
-//}
-
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

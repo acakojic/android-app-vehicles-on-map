@@ -78,10 +78,13 @@ fun MainScreen() {
     var selectedVehicle by remember { mutableStateOf<Vehicle?>(null) }
 
     if (showDialog) {
-        VehicleDetailDialog(selectedVehicle, viewModel = mapViewModel, onDismiss = {
-            showDialog = false
-            selectedVehicle = null
-        })
+        VehicleDetailDialog(selectedVehicle,
+            viewModel = mapViewModel,
+            navController = navController,
+            onDismiss = {
+                showDialog = false
+                selectedVehicle = null
+            })
     }
 
     // mapViewModel end

@@ -21,7 +21,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconToggleButton
 import androidx.compose.material3.MaterialTheme
@@ -36,7 +35,6 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -64,6 +62,9 @@ class MapViewModel(private val customRepository: CustomRepository, private val c
     ViewModel() {
     private val _vehicles = MutableLiveData<List<Vehicle>?>() //This can be null
     val vehicles: LiveData<List<Vehicle>?> = _vehicles //Match type with MutableLiveDatad
+
+    private val _allVhicles = MutableLiveData<List<Vehicle>?>() //This can be null
+    val allVhicles: LiveData<List<Vehicle>?> = _allVhicles //Match type with MutableLiveDatad
 
     var selectedVehicleType = mutableStateOf(VehicleType.Auto)
         private set  // Make the setter private to control modifications through a method
@@ -108,11 +109,15 @@ class MapViewModel(private val customRepository: CustomRepository, private val c
         }
     }
 
-    fun updateMapMarkers(
-        mapView: MapView,
-        vehicles: List<Vehicle>,
-        onVehicleClick: (Vehicle) -> Unit
-    ) {
+//    fun updateMapMarkers(
+//        mapView: MapView,
+//        vehicles: List<Vehicle>,
+//        onVehicleClick: (Vehicle) -> Unit
+//    ) {
+//        addMarkersToMap(context, mapView, vehicles, onVehicleClick)
+//    }
+
+    fun updateMapMarkers(mapView: MapView, vehicles: List<Vehicle>, onVehicleClick: (Vehicle) -> Unit) {
         addMarkersToMap(context, mapView, vehicles, onVehicleClick)
     }
 
@@ -125,9 +130,11 @@ fun VehicleMapScreen(viewModel: MapViewModel, onVehicleClick: (Vehicle) -> Unit)
 //    val vehicles by viewModel.vehicles.observeAsState(initial = listOf())
     val vehicles by viewModel.vehicles.observeAsState(emptyList())
 
-
     val context = LocalContext.current
     val mapView = remember { initializeMap(context) }
+
+//    ShowVehiclesScreen(viewModel = viewModel, navController = rememberNavController(), mapView = mapView)
+
 
     LaunchedEffect(vehicles) {
         mapView.overlays.clear()
@@ -200,6 +207,7 @@ fun VehicleDetailDialog(
     vehicle: Vehicle?,
     onDismiss: () -> Unit,
     viewModel: MapViewModel,
+    navController: NavController
 ) {
     if (vehicle != null) {
 
@@ -207,8 +215,10 @@ fun VehicleDetailDialog(
             onDismissRequest = onDismiss,
             text = {
                 VehicleCard(
-                    vehicle = vehicle, viewModel = viewModel, modifier = Modifier
-                        .fillMaxWidth(), navController = null
+                    vehicle = vehicle, viewModel = viewModel,
+                    modifier = Modifier.fillMaxWidth(),
+                    navController = navController,
+                    onDismiss = onDismiss
                 )
             },
             confirmButton = {}
@@ -218,7 +228,9 @@ fun VehicleDetailDialog(
 
 @Composable
 fun VehicleCard(
-    vehicle: Vehicle, viewModel: MapViewModel, modifier: Modifier, navController: NavController?
+    vehicle: Vehicle, viewModel: MapViewModel, modifier: Modifier,
+    navController: NavController?,
+    onDismiss: (() -> Unit)? = null
 ) {
     Column(
         modifier = modifier
@@ -235,6 +247,7 @@ fun VehicleCard(
                 .clickable {
                     if (navController != null) {
                         Log.d("VehicleCard", "Clickable: ${vehicle.vehicleID}")
+                        onDismiss?.invoke()
                         navController.navigate("vehicleDetails/${vehicle.vehicleID}")
 //                    ShowVehicleInfo(vehicleID = vehicle.vehicleID, viewModel = viewModel)
                     }
