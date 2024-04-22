@@ -141,7 +141,7 @@ fun SignInScreen(signInViewModel: SignInViewModel, navigateToNextScreen: () -> U
                     if (uiState.isLoading) {
                         CircularProgressIndicator(color = Color.White)
                     } else {
-                        Text("Sign In", color = Color.White)
+                        Text("Prijavi se", color = Color.White)
                     }
                 }
 
@@ -163,7 +163,7 @@ fun SignInScreen(signInViewModel: SignInViewModel, navigateToNextScreen: () -> U
                     if (uiState.isLoading) {
                         CircularProgressIndicator(color = Color.White)
                     } else {
-                        Text("Enter Application", color = Color.White)
+                        Text("Udji u aplikaciju", color = Color.White)
                     }
                 }
                 Spacer(modifier = Modifier.height(16.dp))
