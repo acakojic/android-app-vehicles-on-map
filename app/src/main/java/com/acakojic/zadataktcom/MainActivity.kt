@@ -32,9 +32,9 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.acakojic.zadataktcom.data.Vehicle
 import com.acakojic.zadataktcom.factory.MapViewModelFactory
 import com.acakojic.zadataktcom.service.CustomRepository
-import com.acakojic.zadataktcom.service.Vehicle
 import com.acakojic.zadataktcom.ui.theme.ZadatakTcomTheme
 import com.acakojic.zadataktcom.viewmodel.FavoritesScreen
 import com.acakojic.zadataktcom.viewmodel.MapViewModel

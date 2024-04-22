@@ -1,5 +1,7 @@
 package com.acakojic.zadataktcom.service
 
+import com.acakojic.zadataktcom.data.LoginResponse
+import com.acakojic.zadataktcom.data.Vehicle
 import okhttp3.ResponseBody
 import retrofit2.http.POST
 import retrofit2.http.Headers
@@ -51,34 +53,3 @@ interface ApiService {
     ): Response<Vehicle>
 
 }
-
-//login start
-data class LoginResponse(
-    val user: User,
-    val token: String
-)
-
-data class User(
-    val id: Int,
-    val email: String
-)
-//login end
-
-//allVehicles start
-
-data class Vehicle(
-    val vehicleID: Int,
-    val vehicleTypeID: Int,
-    val imageURL: String,
-    val name: String,
-    val location: Location,
-    val rating: Double,
-    val price: Double,
-    val isFavorite: Boolean
-)
-
-data class Location(
-    val latitude: Double,
-    val longitude: Double
-)
-//allVehicles end

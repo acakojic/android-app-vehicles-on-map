@@ -39,7 +39,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import com.acakojic.zadataktcom.service.CustomRepository
-import com.acakojic.zadataktcom.service.Vehicle
 
 import org.osmdroid.views.MapView
 import org.osmdroid.util.GeoPoint
@@ -54,24 +53,23 @@ import androidx.lifecycle.MutableLiveData
 import androidx.navigation.NavController
 import coil.compose.rememberImagePainter
 import com.acakojic.zadataktcom.R
+import com.acakojic.zadataktcom.data.Vehicle
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 
 
 class MapViewModel(private val customRepository: CustomRepository, private val context: Context) :
     ViewModel() {
-    private val _vehicles = MutableLiveData<List<Vehicle>?>() //This can be null
-    val vehicles: LiveData<List<Vehicle>?> = _vehicles //Match type with MutableLiveDatad
+    private val _vehiclesByType = MutableLiveData<List<Vehicle>?>()
+    val vehiclesByType: LiveData<List<Vehicle>?> = _vehiclesByType
 
-    private val _allVehicles = MutableLiveData<List<Vehicle>?>() //This can be null
-    val allVehicles: LiveData<List<Vehicle>?> = _allVehicles //Match type with MutableLiveDatad
+    private val _allVehicles = MutableLiveData<List<Vehicle>?>()
+    val allVehicles: LiveData<List<Vehicle>?> = _allVehicles
 
     var selectedVehicleType = mutableStateOf(VehicleType.Auto)
-        private set  // Make the setter private to control modifications through a method
+        private set
 
-    //State for UI to react
-    var uiState = mutableStateOf(VehicleType.Auto)
-
+    val searchQuery = mutableStateOf("")
 
     init {
         fetchVehicles()
@@ -81,70 +79,66 @@ class MapViewModel(private val customRepository: CustomRepository, private val c
         viewModelScope.launch {
             val response = customRepository.getAllVehicles(context)
             if (response.isSuccessful && response.body() != null) {
-                _vehicles.value = response.body()!!.filter {
+                _vehiclesByType.value = response.body()!!.filter {
                     it.vehicleTypeID == selectedVehicleType.value.typeId
                 }
                 _allVehicles.value = response.body()!!
 
             } else {
-                _vehicles.value = emptyList()
+                _vehiclesByType.value = emptyList()
                 _allVehicles.value = emptyList()
             }
         }
     }
 
     fun setVehicleType(type: VehicleType) {
-        if (selectedVehicleType.value != type) {
-            selectedVehicleType.value = type
-            fetchVehicles()
-        }
+        selectedVehicleType.value = type
+        fetchVehicles()
+        searchQuery.value = ""
     }
-
 
 
     fun toggleFavorite(vehicleId: Int, isFavorite: Boolean) {
         viewModelScope.launch {
-            val updatedList = _vehicles.value?.map { vehicle ->
+
+            _allVehicles.value = _allVehicles.value?.map { vehicle ->
                 if (vehicle.vehicleID == vehicleId) vehicle.copy(isFavorite = isFavorite) else vehicle
             }
-
-            val updatedListAllVehicles = _allVehicles.value?.map { vehicle ->
+            _vehiclesByType.value = _vehiclesByType.value?.map { vehicle ->
                 if (vehicle.vehicleID == vehicleId) vehicle.copy(isFavorite = isFavorite) else vehicle
             }
-
-            _vehicles.value = updatedList
-            _allVehicles.value = updatedListAllVehicles
         }
     }
 
-    fun updateMapMarkers(mapView: MapView, vehicles: List<Vehicle>, onVehicleClick: (Vehicle) -> Unit) {
+    fun updateMapMarkers(
+        mapView: MapView,
+        vehicles: List<Vehicle>,
+        onVehicleClick: (Vehicle) -> Unit
+    ) {
+        _vehiclesByType.value = vehicles
         addMarkersToMap(context, mapView, vehicles, onVehicleClick)
     }
 
+    fun onSearchQueryChanged(query: String) {
+        searchQuery.value = query
 
+        if (query.isEmpty()) {
+            setVehicleType(selectedVehicleType.value)
+        } else {
+        }
+    }
 }
-
 
 @Composable
 fun VehicleMapScreen(viewModel: MapViewModel, onVehicleClick: (Vehicle) -> Unit) {
-//    val vehicles by viewModel.vehicles.observeAsState(initial = listOf())
-    val vehicles by viewModel.vehicles.observeAsState(emptyList())
+    val vehicles by viewModel.vehiclesByType.observeAsState(emptyList())
 
     val context = LocalContext.current
     val mapView = remember { initializeMap(context) }
 
-//    ShowVehiclesScreen(viewModel = viewModel, navController = rememberNavController(), mapView = mapView)
-
-
     LaunchedEffect(vehicles) {
         mapView.overlays.clear()
         vehicles?.forEach { _ ->
-//            addMarkersToMap(
-//                context = context,
-//                mapView = mapView,
-//                vehicles = vehicles!!,
-//                onVehicleClick = onVehicleClick
-//            )
             viewModel.updateMapMarkers(mapView, vehicles!!, onVehicleClick)
         }
         mapView.invalidate()
@@ -161,7 +155,6 @@ fun VehicleImageWithFavorite(
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     val repository = remember { CustomRepository(context) }
-    val isFavorite = remember { mutableStateOf(vehicle.isFavorite) }
 
     Box(contentAlignment = Alignment.TopEnd) {
 
@@ -178,15 +171,13 @@ fun VehicleImageWithFavorite(
                 .height(200.dp)
         )
         IconToggleButton(
-            checked = isFavorite.value,
+            checked = vehicle.isFavorite,
             onCheckedChange = { isChecked ->
                 coroutineScope.launch {
                     val response = repository.addToFavorites(context, vehicle.vehicleID)
 
                     if (response.isSuccess) {
-                        Log.d("VehicleImageWithFavorite", "Favorites updated successfully.")
                         viewModel.toggleFavorite(vehicle.vehicleID, isChecked)
-                        isFavorite.value = isChecked
                     } else {
                         Log.e("VehicleImageWithFavorite", "Error updating favorites.")
                     }
@@ -196,7 +187,8 @@ fun VehicleImageWithFavorite(
             Icon(
                 painter = painterResource(id = R.drawable.nav_tab_favorite_icon),
                 contentDescription = "Favorite",
-                tint = if (isFavorite.value) Color(0xFFFFA500) else Color.White
+//                tint = if (isFavorite.value) Color(0xFFFFA500) else Color.White //good for others tabs
+                        tint = if (vehicle.isFavorite) Color(0xFFFFA500) else Color.White //good for others tabs
             )
         }
     }
@@ -228,7 +220,9 @@ fun VehicleDetailDialog(
 
 @Composable
 fun VehicleCard(
-    vehicle: Vehicle, viewModel: MapViewModel, modifier: Modifier,
+    vehicle: Vehicle,
+    viewModel: MapViewModel,
+    modifier: Modifier,
     navController: NavController?,
     onDismiss: (() -> Unit)? = null
 ) {
@@ -249,7 +243,6 @@ fun VehicleCard(
                         Log.d("VehicleCard", "Clickable: ${vehicle.vehicleID}")
                         onDismiss?.invoke()
                         navController.navigate("vehicleDetails/${vehicle.vehicleID}")
-//                    ShowVehicleInfo(vehicleID = vehicle.vehicleID, viewModel = viewModel)
                     }
                 }
         ) {
@@ -287,7 +280,7 @@ fun addMarkersToMap(
     vehicles: List<Vehicle>,
     onVehicleClick: (Vehicle) -> Unit
 ) {
-    mapView.overlays.clear()  //Clear existing overlays first
+    mapView.overlays.clear()
 
     vehicles.forEach { vehicle ->
         val marker = Marker(mapView).apply {
@@ -297,7 +290,7 @@ fun addMarkersToMap(
             setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
             icon = getMarkerIconWithText(
                 context = context,
-                vehicleTypeID = vehicle.vehicleTypeID,
+                isFavorite = vehicle.isFavorite,
                 price = vehicle.price
             )
 
@@ -311,13 +304,11 @@ fun addMarkersToMap(
     mapView.invalidate()  //Refresh the map
 }
 
-fun getMarkerIconWithText(context: Context, vehicleTypeID: Int, price: Double): Drawable {
-    val drawable = when (vehicleTypeID) {
-        1 -> ContextCompat.getDrawable(context, R.drawable.circle_black) //cars
-        2 -> ContextCompat.getDrawable(context, R.drawable.circle_red) //moto
-        3 -> ContextCompat.getDrawable(context, R.drawable.circle_blue) //truck
-        else ->
-            ContextCompat.getDrawable(context, R.drawable.circle_black) // Default case
+fun getMarkerIconWithText(context: Context, isFavorite: Boolean, price: Double): Drawable {
+    val drawable = if (isFavorite) {
+        ContextCompat.getDrawable(context, R.drawable.circle_orange) //cars
+    } else {
+        ContextCompat.getDrawable(context, R.drawable.circle_black) // Default case
     }
 
     drawable?.let {
@@ -344,7 +335,7 @@ fun getMarkerIconWithText(context: Context, vehicleTypeID: Int, price: Double): 
 
         return BitmapDrawable(context.resources, bitmap)
     }
-    return ContextCompat.getDrawable(context, R.drawable.circle_red)!! // Fallback
+    return ContextCompat.getDrawable(context, R.drawable.circle_black)!! // Fallback
 }
 
 

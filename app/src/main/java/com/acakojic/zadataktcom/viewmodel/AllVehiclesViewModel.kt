@@ -39,20 +39,24 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 
 class AllVehiclesViewModel {
+
 }
 
 @Composable
 fun ShowVehiclesScreen(viewModel: MapViewModel, navController: NavHostController) {
     var context = LocalContext.current
-    var searchQuery by remember { mutableStateOf("") }
+
+    val searchQuery by viewModel.searchQuery
+
     val selectedTab by viewModel.selectedVehicleType
 
-    val allVehicles = viewModel.vehicles.observeAsState(listOf()).value ?: listOf()
+    val vehiclesByType = viewModel.vehiclesByType.observeAsState(listOf()).value ?: listOf()
+
     var selectedSortOrder by remember { mutableStateOf(SortOrder.PriceAsc) }
 
     val mapView = remember { initializeMap(context) }
 
-    var sortedAndFilteredVehicles = allVehicles
+    var sortedAndFilteredVehicles = vehiclesByType
         .filter { vehicle ->
             vehicle.vehicleTypeID == selectedTab.typeId &&
                     vehicle.name.contains(searchQuery, ignoreCase = true)
@@ -67,7 +71,7 @@ fun ShowVehiclesScreen(viewModel: MapViewModel, navController: NavHostController
         )
 
     LaunchedEffect(searchQuery, selectedSortOrder) {
-        sortedAndFilteredVehicles = allVehicles
+        sortedAndFilteredVehicles = vehiclesByType
             .filter { it.name.contains(searchQuery, ignoreCase = true) }
             .let { list ->
                 when (selectedSortOrder) {
@@ -77,13 +81,14 @@ fun ShowVehiclesScreen(viewModel: MapViewModel, navController: NavHostController
             }
     }
 
-    val filteredVehicles = viewModel.vehicles.observeAsState(listOf()).value
+    val filteredVehicles = viewModel.vehiclesByType.observeAsState(listOf()).value
         ?.filter { it.name.contains(searchQuery, ignoreCase = true) }
         ?: listOf()
 
     // Update the map markers when the search query changes
     LaunchedEffect(searchQuery) {
-        if (filteredVehicles.size == 1) {
+        if (filteredVehicles.isNotEmpty()) {
+//            if (filteredVehicles.size == 1) { ovo je bilo
             // If there is only one vehicle in the search results, update the map markers to show just that vehicle
             viewModel.updateMapMarkers(mapView, filteredVehicles) { vehicle ->
                 // Handle vehicle marker click event
@@ -95,7 +100,7 @@ fun ShowVehiclesScreen(viewModel: MapViewModel, navController: NavHostController
 
         SearchAndSortRow(
             searchText = searchQuery,
-            onSearchQueryChanged = { query -> searchQuery = query },
+            onSearchQueryChanged = viewModel::onSearchQueryChanged,
             selectedSortOrder = selectedSortOrder,
             onSortOrderSelected = { sortOrder -> selectedSortOrder = sortOrder }
         )
@@ -104,7 +109,9 @@ fun ShowVehiclesScreen(viewModel: MapViewModel, navController: NavHostController
             VehicleType.entries.forEachIndexed { index, type ->
                 Tab(
                     selected = selectedTab.ordinal == index,
-                    onClick = { viewModel.setVehicleType(type) },
+                    onClick = {
+                        viewModel.setVehicleType(type)
+                    },
                     text = { Text(type.name) }
                 )
             }
@@ -145,7 +152,7 @@ fun SearchAndSortRow(
             modifier = Modifier
                 .weight(1f)
                 .padding(end = 8.dp),
-            placeholder = { Text("Search vehicles") },
+            placeholder = { Text("Pretraži vozila") },
             singleLine = true,
             colors = textFieldColors(containerColor = Color.Transparent)
         )
@@ -181,7 +188,7 @@ fun SearchAndSortRow(
                                     Icon(
                                         imageVector = Icons.Filled.Check,
                                         contentDescription = "Selected",
-                                        tint = Color(0xFFFFA500) // Orange color for the check icon
+                                        tint = Color.White
                                     )
                                 }
                             }

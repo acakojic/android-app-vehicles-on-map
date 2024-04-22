@@ -39,8 +39,8 @@ import androidx.compose.material.icons.filled.KeyboardArrowLeft
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavController
 import androidx.navigation.NavHostController
+import com.acakojic.zadataktcom.data.Vehicle
 import com.acakojic.zadataktcom.service.CustomRepository
-import com.acakojic.zadataktcom.service.Vehicle
 import kotlinx.coroutines.launch
 
 class FavoriteViewModel() {
