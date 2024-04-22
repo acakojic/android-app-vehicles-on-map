@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconToggleButton
 import androidx.compose.material3.MaterialTheme
@@ -35,6 +36,7 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -58,25 +60,44 @@ import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 
 
-class MapViewModel(private val customRepository: CustomRepository, private val context: Context) : ViewModel() {
+class MapViewModel(private val customRepository: CustomRepository, private val context: Context) :
+    ViewModel() {
     private val _vehicles = MutableLiveData<List<Vehicle>?>() //This can be null
-    val vehicles: LiveData<List<Vehicle>?> = _vehicles //Match type with MutableLiveData
+    val vehicles: LiveData<List<Vehicle>?> = _vehicles //Match type with MutableLiveDatad
+
+    var selectedVehicleType = mutableStateOf(VehicleType.Auto)
+        private set  // Make the setter private to control modifications through a method
+
+
+    //State for UI to react
+    var uiState = mutableStateOf(VehicleType.Auto)
+
 
     init {
+        fetchVehicles()
+    }
+
+    fun fetchVehicles() {
         viewModelScope.launch {
-            try {
-                val response = customRepository.getAllVehicles(context)
-                if (response.isSuccessful && response.body() != null) {
-                    _vehicles.value = response.body()!!
-                    Log.d("MapViewModel", "success! ${vehicles.value} ")
-                    Log.d("MapViewModel", "success! ${vehicles.value?.size} ")
-                    Log.d("MapViewModel", "success! ${vehicles.value?.get(0)?.name} ")
+            val response = customRepository.getAllVehicles(context)
+            if (response.isSuccessful && response.body() != null) {
+                _vehicles.value = response.body()!!.filter {
+                    it.vehicleTypeID == selectedVehicleType.value.typeId
                 }
-            } catch (e: Exception) {
-                Log.e("MapViewModel", "Error fetching vehicles", e)
+            } else {
+                _vehicles.value = emptyList()
             }
         }
     }
+
+    fun setVehicleType(type: VehicleType) {
+        if (selectedVehicleType.value != type) {
+            selectedVehicleType.value = type
+            fetchVehicles()
+        }
+    }
+
+
 
     fun toggleFavorite(vehicleId: Int, isFavorite: Boolean) {
         viewModelScope.launch {
@@ -86,24 +107,38 @@ class MapViewModel(private val customRepository: CustomRepository, private val c
             _vehicles.value = updatedList
         }
     }
+
+    fun updateMapMarkers(
+        mapView: MapView,
+        vehicles: List<Vehicle>,
+        onVehicleClick: (Vehicle) -> Unit
+    ) {
+        addMarkersToMap(context, mapView, vehicles, onVehicleClick)
+    }
+
+
 }
+
 
 @Composable
 fun VehicleMapScreen(viewModel: MapViewModel, onVehicleClick: (Vehicle) -> Unit) {
-    val vehicles by viewModel.vehicles.observeAsState(initial = listOf())
+//    val vehicles by viewModel.vehicles.observeAsState(initial = listOf())
+    val vehicles by viewModel.vehicles.observeAsState(emptyList())
+
 
     val context = LocalContext.current
     val mapView = remember { initializeMap(context) }
 
     LaunchedEffect(vehicles) {
         mapView.overlays.clear()
-        vehicles?.let {
-            addMarkersToMap(
-                context = context,
-                mapView = mapView,
-                vehicles = it,
-                onVehicleClick = onVehicleClick
-            )
+        vehicles?.forEach { _ ->
+//            addMarkersToMap(
+//                context = context,
+//                mapView = mapView,
+//                vehicles = vehicles!!,
+//                onVehicleClick = onVehicleClick
+//            )
+            viewModel.updateMapMarkers(mapView, vehicles!!, onVehicleClick)
         }
         mapView.invalidate()
     }
@@ -182,7 +217,8 @@ fun VehicleDetailDialog(
 }
 
 @Composable
-fun VehicleCard(vehicle: Vehicle, viewModel: MapViewModel, modifier: Modifier, navController: NavController?
+fun VehicleCard(
+    vehicle: Vehicle, viewModel: MapViewModel, modifier: Modifier, navController: NavController?
 ) {
     Column(
         modifier = modifier

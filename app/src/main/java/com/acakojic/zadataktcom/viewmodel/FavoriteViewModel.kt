@@ -37,6 +37,7 @@ import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.material.icons.filled.KeyboardArrowLeft
 import androidx.lifecycle.viewModelScope
+import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import com.acakojic.zadataktcom.service.CustomRepository
 import com.acakojic.zadataktcom.service.Vehicle
@@ -51,14 +52,26 @@ fun FavoritesScreen(viewModel: MapViewModel, navController: NavHostController) {
     val favoriteVehicles =
         viewModel.vehicles.observeAsState().value?.filter { it.isFavorite } ?: listOf()
 
+    ShowVehiclesInList(
+        vehicles = favoriteVehicles, viewModel = viewModel, navController = navController,
+        elementOnTopOfScreen = { CenteredText("Omiljena vozila") })
+}
+
+@Composable
+fun ShowVehiclesInList(
+    vehicles: List<Vehicle>,
+    viewModel: MapViewModel,
+    navController: NavController,
+    elementOnTopOfScreen: @Composable () -> Unit
+) {
+
     Column {
 
-
-        CenteredText("Omiljena vozila")
+        elementOnTopOfScreen()
 
         LazyColumn {
 
-            items(favoriteVehicles) { vehicle ->
+            items(vehicles) { vehicle ->
                 Spacer(modifier = Modifier.height(20.dp))
                 VehicleCard(
                     vehicle = vehicle,

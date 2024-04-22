@@ -39,6 +39,7 @@ import com.acakojic.zadataktcom.ui.theme.ZadatakTcomTheme
 import com.acakojic.zadataktcom.viewmodel.FavoritesScreen
 import com.acakojic.zadataktcom.viewmodel.MapViewModel
 import com.acakojic.zadataktcom.viewmodel.ShowVehicleInfo
+import com.acakojic.zadataktcom.viewmodel.ShowVehiclesScreen
 import com.acakojic.zadataktcom.viewmodel.VehicleDetailDialog
 import com.acakojic.zadataktcom.viewmodel.VehicleMapScreen
 
@@ -98,6 +99,10 @@ fun MainScreen() {
                     selectedVehicle = vehicle
                     showDialog = true
                 }
+            }
+
+            composable(Screen.List.route) {
+                ShowVehiclesScreen(viewModel = mapViewModel, navController = navController)
             }
 
             composable(Screen.Favorites.route) {
